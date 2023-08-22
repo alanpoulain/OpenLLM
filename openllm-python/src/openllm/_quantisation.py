@@ -1,23 +1,22 @@
-# mypy: disable-error-code="name-defined"
+# mypy: disable-error-code="name-defined,no-redef"
 from __future__ import annotations
-import logging, sys, typing as t
-from .utils import LazyLoader, is_autogptq_available, is_bitsandbytes_available, is_transformers_supports_kbit, pkg
-if sys.version_info[:2] >= (3, 11): from typing import overload
-else: from typing_extensions import overload
+import logging, typing as t
+from openllm_core.utils import LazyLoader, is_autogptq_available, is_bitsandbytes_available, is_transformers_supports_kbit, pkg
+from openllm_core._typing_compat import overload
 if t.TYPE_CHECKING:
   from ._llm import LLM
-  from ._typing_compat import DictStrAny
-
+  from openllm_core._typing_compat import DictStrAny
 autogptq, torch, transformers = LazyLoader("autogptq", globals(), "auto_gptq"), LazyLoader("torch", globals(), "torch"), LazyLoader("transformers", globals(), "transformers")
 
 logger = logging.getLogger(__name__)
 
 QuantiseMode = t.Literal["int8", "int4", "gptq"]
-
 @overload
-def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: t.Literal["int8", "int4"], **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig, DictStrAny]: ...
+def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: t.Literal["int8", "int4"], **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig, DictStrAny]:
+  ...
 @overload
-def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: t.Literal["gptq"], **attrs: t.Any) -> tuple[autogptq.BaseQuantizeConfig, DictStrAny]: ...
+def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: t.Literal["gptq"], **attrs: t.Any) -> tuple[autogptq.BaseQuantizeConfig, DictStrAny]:
+  ...
 def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: QuantiseMode, **attrs: t.Any) -> tuple[transformers.BitsAndBytesConfig | autogptq.BaseQuantizeConfig, DictStrAny]:
   # 8 bit configuration
   int8_threshold = attrs.pop("llm_int8_threshhold", 6.0)
@@ -53,6 +52,8 @@ def infer_quantisation_config(cls: type[LLM[t.Any, t.Any]], quantise: QuantiseMo
     if not is_autogptq_available():
       logger.warning("'quantize=\"gptq\"' requires 'auto-gptq' to be installed (not available with local environment). Make sure to have 'auto-gptq' available locally: 'pip install \"openllm[gptq]\"'. OpenLLM will fallback to int8 with bitsandbytes.")
       quantisation_config = create_int8_config(int8_skip_modules)
-    else: quantisation_config = autogptq.BaseQuantizeConfig(**autogptq_attrs)
-  else: raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq'], got {quantise} instead.")
+    else:
+      quantisation_config = autogptq.BaseQuantizeConfig(**autogptq_attrs)
+  else:
+    raise ValueError(f"'quantize' must be one of ['int8', 'int4', 'gptq'], got {quantise} instead.")
   return quantisation_config, attrs

@@ -75,7 +75,9 @@ jobs:
       - name: Install build frontend
         run: python -m pip install --upgrade build
       - name: Build
-        run: python -m build -sw openllm-python/
+        run: |
+          bash local.sh
+          python -m build -sw openllm-python/
       - name: Upload artifacts
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # ratchet:actions/upload-artifact@v3
         with:
@@ -151,7 +153,7 @@ jobs:
           targets: ${{ matrix.job.target }}
       - name: Set up cross compiling
         if: matrix.job.cross
-        uses: taiki-e/install-action@5265bea15b0d6367d8e293f306c880f1d0271190 # ratchet:taiki-e/install-action@v2
+        uses: taiki-e/install-action@c9ba9d12d07c1ddcffa40b34f54a93e84ff95402 # ratchet:taiki-e/install-action@v2
         with:
           tool: cross
       - name: Configure cross compiling

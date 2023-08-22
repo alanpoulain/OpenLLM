@@ -4,7 +4,6 @@ requires = [
   "hatchling==1.18.0",
   "hatch-vcs==0.3.0",
   "hatch-fancy-pypi-readme==23.1.0",
-  "hatch-mypyc==0.16.0",
 ]
 [project]
 authors = [
@@ -102,6 +101,9 @@ MYPYC_OPT_LEVEL = "3"
 [tool.cibuildwheel.linux]
 before-build = ["yum install -y clang gcc"]
 
+[tool.cibuildwheel.macos]
+before-build = ["rustup target add aarch64-apple-darwin"]
+
 [tool.cibuildwheel.linux.environment]
 HATCH_BUILD_HOOKS_ENABLE = "1"
 MYPYC_DEBUG_LEVEL = "1"
@@ -133,6 +135,10 @@ directory = "change"
 name = "Changes"
 showcontent = true
 [[tool.towncrier.type]]
+directory = "refactor"
+name = "Refactor"
+showcontent = true
+[[tool.towncrier.type]]
 directory = "feature"
 name = "Features"
 showcontent = true
@@ -161,14 +167,11 @@ extend-exclude = [
 ]
 extend-include = ["*.ipynb"]
 extend-select = [
-  "B",    # flake8-bugbear
   "I",    # isort
   "G",    # flake8-logging-format
-  "D",    # pydocstyle
   "W",    # pycodestyle
   "Q",    # flake8-quotes
   "FA",   # flake8-future-annotations
-  "S",    # flake8-bandit
   "TCH",  # flake8-type-checking
   "PLW",  # pylint-warning
   "PLR",  # pylint-refactor
@@ -180,12 +183,7 @@ extend-select = [
 ]
 fix = true
 ignore = [
-  "B027",    # Allow non-abstract empty methods in abstract base classes
   "FBT003",  # Allow boolean positional values in function calls, like `dict.get(... True)`
-  "S105",    # Ignore checks for possible passwords
-  "S106",
-  "S107",
-  "S603",    # ignore subprocess.call
   "PLR0911",
   "PLR0912",
   "PLR0913",
@@ -195,27 +193,23 @@ ignore = [
   "E401",    # ignore multiple line import
   "E702",
   "I001",    # unsorted imports
-  "D103",    # Just missing docstring for magic methods.
-  "D102",
-  "D101",
-  "D100",
   "TCH004",  # don't move runtime import out, just warn about it
   "RUF012",  # mutable attributes to be used with ClassVar
   "B905",    # zip warning about strict, only applicable for 3.10+
-  "D105",    # magic docstring
   "E701",    # multiple statement on single line
 ]
 line-length = 768
-target-version = "py38"
-typing-modules = ["openllm._typing_compat"]
+target-version = "py312"
+typing-modules = ["openllm_core._typing_compat"]
 unfixable = ["TCH004"]
 [tool.ruff.flake8-type-checking]
-exempt-modules = ["typing", "typing_extensions", "openllm._typing_compat"]
+exempt-modules = ["typing", "typing_extensions", "openllm_core._typing_compat"]
 runtime-evaluated-base-classes = [
   "pydantic.BaseModel",
-  "openllm._configuration.LLMConfig",
-  "openllm._configuration.GenerationConfig",
-  "openllm._configuration.ModelSettings",
+  "openllm_core._configuration.LLMConfig",
+  "openllm_core._configuration.GenerationConfig",
+  "openllm_core._configuration.ModelSettings",
+  "openllm.LLMConfig",
 ]
 runtime-evaluated-decorators = ["attrs.define", "attrs.frozen", "trait"]
 [tool.ruff.pydocstyle]
@@ -226,7 +220,7 @@ ignore-overlong-task-comments = true
 combine-as-imports = true
 force-single-line = false
 force-wrap-aliases = true
-known-first-party = ["openllm", "bentoml"]
+known-first-party = ["openllm", "bentoml", "openllm_core", "openllm_client"]
 known-third-party = [
   "transformers",
   "click",
@@ -244,13 +238,20 @@ required-imports = ["from __future__ import annotations"]
 avoid-escape = false
 [tool.ruff.extend-per-file-ignores]
 "openllm-python/src/openllm/_service.py" = ["E401"]
-"openllm-python/src/openllm/cli/entrypoint.py" = ["D301"]
-"openllm-python/src/openllm/client/runtimes/*" = ["D107"]
-"openllm-python/src/openllm/models/**" = ["E", "D", "F"]
-"openllm-python/src/openllm/utils/import_utils.py" = ["PLW0603"]
-"openllm-python/src/openllm/_configuration.py" = ["F811"]
-"openllm-python/tests/**/*" = ["S101", "TID252", "D", "PT011", "S307"]
-"typings/**" = ["D", "F", "E"]
+"openllm-python/src/openllm/models/**" = ["E", "F"]
+"openllm-python/tests/**/*" = ["S101", "TID252", "PT011", "S307"]
+"openllm-python/src/openllm/_llm.py" = ["F811"]
+"openllm-core/src/openllm_core/utils/import_utils.py" = ["PLW0603", "F811"]
+"openllm-core/src/openllm_core/_configuration.py" = ["F811"]
+"openllm-client/src/openllm_client/bentoclient/_http.py" = ["PERF203"]
+"typings/**" = ["F", "E"]
+
+[tool.yapfignore]
+ignore_patterns = [
+  "openllm-python/src/openllm/playground",
+  "openllm-python/src/openllm/utils/dummy_*.py",
+  "openllm-python/src/openllm/models/__init__.py"
+]
 
 [tool.yapf]
 ALIGN_CLOSING_BRACKET_WITH_VISUAL_INDENT = true
@@ -259,41 +260,46 @@ ALLOW_MULTILINE_LAMBDAS = false
 ALLOW_SPLIT_BEFORE_DEFAULT_OR_NAMED_ASSIGNS = false
 ALLOW_SPLIT_BEFORE_DICT_VALUE = false
 ARITHMETIC_PRECEDENCE_INDICATION = true
-BLANK_LINES_AROUND_TOP_LEVEL_DEFINITION = 1
-BLANK_LINES_BETWEEN_TOP_LEVEL_IMPORTS_AND_VARIABLES = 1
+BLANK_LINES_AROUND_TOP_LEVEL_DEFINITION = 0
+BLANK_LINES_BETWEEN_TOP_LEVEL_IMPORTS_AND_VARIABLES = 0
 BLANK_LINE_BEFORE_CLASS_DOCSTRING = false
 BLANK_LINE_BEFORE_MODULE_DOCSTRING = false
 BLANK_LINE_BEFORE_NESTED_CLASS_OR_DEF = false
 COALESCE_BRACKETS = true
-COLUMN_LIMIT = 768
+COLUMN_LIMIT = 512
 CONTINUATION_ALIGN_STYLE = "VALIGN-RIGHT"
 DEDENT_CLOSING_BRACKETS = true
 DISABLE_ENDING_COMMA_HEURISTIC = true
-EACH_DICT_ENTRY_ON_SEPARATE_LINE = false
+EACH_DICT_ENTRY_ON_SEPARATE_LINE = true
 INDENT_BLANK_LINES = false
 INDENT_CLOSING_BRACKETS = false
 INDENT_WIDTH = 2
 JOIN_MULTIPLE_LINES = true
 NO_SPACES_AROUND_SELECTED_BINARY_OPERATORS = true
 SPACES_AROUND_SUBSCRIPT_COLON = false
+SPACES_AROUND_DICT_DELIMITERS = false
+SPACES_AROUND_LIST_DELIMITERS = false
+SPACES_AROUND_POWER_OPERATOR = false
+SPACES_AROUND_TUPLE_DELIMITERS = false
 SPACE_BETWEEN_ENDING_COMMA_AND_CLOSING_BRACKET = false
 SPACE_INSIDE_BRACKETS = false
 SPLIT_ALL_COMMA_SEPARATED_VALUES = false
-SPLIT_ALL_TOP_LEVEL_COMMA_SEPARATED_VALUES = false
+SPLIT_ALL_TOP_LEVEL_COMMA_SEPARATED_VALUES = true
 SPLIT_ARGUMENTS_WHEN_COMMA_TERMINATED = false
 SPLIT_BEFORE_BITWISE_OPERATOR = false
 SPLIT_BEFORE_CLOSING_BRACKET = false
 SPLIT_BEFORE_DICT_SET_GENERATOR = false
-SPLIT_BEFORE_DOT = false
+SPLIT_BEFORE_DOT = true # similar to how rust format its expression
 SPLIT_BEFORE_EXPRESSION_AFTER_OPENING_PAREN = false
 SPLIT_BEFORE_FIRST_ARGUMENT = false
 SPLIT_BEFORE_LOGICAL_OPERATOR = false
 SPLIT_BEFORE_NAMED_ASSIGNS = false
-SPLIT_COMPLEX_COMPREHENSION = false
-SPLIT_PENALTY_AFTER_OPENING_BRACKET = 10000
+SPLIT_COMPLEX_COMPREHENSION = true
+SPLIT_PENALTY_AFTER_OPENING_BRACKET = 350
 SPLIT_PENALTY_BEFORE_IF_EXPR = 10000
-SPLIT_PENALTY_COMPREHENSION = 3000
-SPLIT_PENALTY_FOR_ADDED_LINE_SPLIT = 8000
+SPLIT_PENALTY_COMPREHENSION = 2500
+SPLIT_PENALTY_FOR_ADDED_LINE_SPLIT = 5000
+USE_TABS = false
 
 [tool.pytest.ini_options]
 addopts = ["-rfEX", "-pno:warnings", "--snapshot-warn-unused"]
@@ -311,7 +317,7 @@ omit = [
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
   "openllm-python/src/openllm/utils/dummy_*.py",
-  "openllm-python/src/openllm/_typing_compat.py",
+  "openllm-core/src/openllm_core/_typing_compat.py",
 ]
 source_pkgs = ["openllm"]
 [tool.coverage.report]
@@ -327,6 +333,7 @@ exclude_lines = [
   'if DEBUG:',
   'if utils.DEBUG',
   'if openllm.utils.DEBUG',
+  'if openllm_core.utils.DEBUG',
   '@_overload',
   '@overload',
   '@t.overload',
@@ -342,7 +349,7 @@ omit = [
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
   "openllm-python/src/openllm/utils/dummy_*.py",
-  "openllm-python/src/openllm/_typing_compat.py",
+  "openllm-core/src/openllm_core/_typing_compat.py",
 ]
 precision = 2
 show_missing = true
@@ -359,15 +366,19 @@ exclude = [
   "openllm-python/src/openllm/__init__.py",
   "openllm-python/src/openllm/__main__.py",
   "openllm-python/src/openllm/utils/dummy_*.py",
-  "openllm-python/src/openllm/_typing_compat.py",
   "openllm-python/tests",
+  "openllm-core/src/openllm_core/_typing_compat.py",
   "cz.py",
   "hatch_build.py",
   "tools",
   "examples",
   "typings",
 ]
-executionEnvironments = [{ root = "openllm-python/src" }]
+executionEnvironments = [
+  { root = "openllm-python/src" },
+  { root = "openllm-core/src" },
+  { root = "openllm-client/src" },
+]
 pythonVersion = "3.12"
 enableExperimentalFeatures = true
 reportMissingImports = "warning"
@@ -389,16 +400,15 @@ exclude = [
   "openllm-python/src/openllm/playground",
   "openllm-python/src/openllm/utils/dummy_*.py",
   "openllm-python/src/openllm/models",
-  "openllm-python/src/openllm/_typing_compat.py",
   "openllm-python/src/openllm/_service.py",
+  "openllm-core/src/openllm_core/_typing_compat.py",
 ]
-modules = ["openllm"]
+modules = ["openllm", "openllm-core", "openllm-client"]
 mypy_path = "typings"
 pretty = true
 python_version = "3.8"
 show_error_codes = true
 strict = true
-warn_no_return = false
 warn_return_any = false
 warn_unreachable = true
 warn_unused_ignores = false
@@ -426,4 +436,4 @@ module = [
 ]
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = ["openllm.models.*", "openllm.playground.*", "openllm._typing_compat"]
+module = ["openllm.models.*", "openllm.playground.*", "openllm_core._typing_compat"]
