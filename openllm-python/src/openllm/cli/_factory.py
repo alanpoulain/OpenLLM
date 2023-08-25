@@ -208,11 +208,10 @@ Available official model_id(s): [default: {llm_config['default_id']}]
       try:
         server.start(env=start_env, text=True, blocking=True)
       except KeyboardInterrupt:
+        server.stop()
         next_step(model, adapter_map)
       except Exception as err:
         termui.echo(f'Error caught while running LLM Server:\n{err}', fg='red')
-      else:
-        next_step(model, adapter_map)
 
     # NOTE: Return the configuration for telemetry purposes.
     return config
@@ -281,26 +280,25 @@ def start_decorator(llm_config: LLMConfig, serve_grpc: bool = False) -> t.Callab
         serialisation_option(factory=cog.optgroup),
         cog.optgroup.group(
             'Fine-tuning related options',
-            help='''\
-    Note that the argument `--adapter-id` can accept the following format:
+            help='''Note that the argument `--adapter-id` can accept the following format:
 
-    - `--adapter-id /path/to/adapter` (local adapter)
+            - `--adapter-id /path/to/adapter` (local adapter)
 
-    - `--adapter-id remote/adapter` (remote adapter from HuggingFace Hub)
+            - `--adapter-id remote/adapter` (remote adapter from HuggingFace Hub)
 
-    - `--adapter-id remote/adapter:eng_lora` (two previous adapter options with the given adapter_name)
+            - `--adapter-id remote/adapter:eng_lora` (two previous adapter options with the given adapter_name)
 
-    ```bash
+            ```bash
 
-    $ openllm start opt --adapter-id /path/to/adapter_dir --adapter-id remote/adapter:eng_lora
+            $ openllm start opt --adapter-id /path/to/adapter_dir --adapter-id remote/adapter:eng_lora
 
-    ```
-    '''
+            ```
+            '''
         ),
         cog.optgroup.option(
             '--adapter-id',
             default=None,
-            help='Optional name or path for given LoRA adapter' + f" to wrap '{llm_config['model_name']}'",
+            help=f'Optional name or path for given LoRA adapter to wrap "{llm_config["model_name"]}"',
             multiple=True,
             callback=_id_callback,
             metavar='[PATH | [remote/][adapter_name:]adapter_id][, ...]'
@@ -355,11 +353,6 @@ def parse_serve_args(serve_grpc: bool) -> t.Callable[[t.Callable[..., LLMConfig]
 _http_server_args, _grpc_server_args = parse_serve_args(False), parse_serve_args(True)
 
 def _click_factory_type(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC | None], FC]:
-  '''General ``@click`` decorator with some sauce.
-
-  This decorator extends the default ``@click.option`` plus a factory option and factory attr to
-  provide type-safe click.option or click.argument wrapper for all compatible factory.
-  '''
   factory = attrs.pop('factory', click)
   factory_attr = attrs.pop('attr', 'option')
   if factory_attr != 'argument': attrs.setdefault('help', 'General option for OpenLLM CLI.')
@@ -401,10 +394,7 @@ def fast_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Callable[[FC
       default=False,
       envvar='OPENLLM_USE_LOCAL_LATEST',
       show_envvar=True,
-      help='''Whether to skip checking if models is already in store.
-
-                                                                                                          This is useful if you already downloaded or setup the model beforehand.
-                                                                                                          ''',
+      help='''Whether to skip checking if models is already in store. This is useful if you already downloaded or setup the model beforehand.''',
       **attrs
   )(f)
 
@@ -430,8 +420,7 @@ def model_version_option(f: _AnyCallable | None = None, **attrs: t.Any) -> t.Cal
 
 def model_name_argument(f: _AnyCallable | None = None, required: bool = True, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_argument('model_name', type=click.Choice([inflection.dasherize(name) for name in openllm.CONFIG_MAPPING]), required=required, **attrs)(f)
-
-def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
+def quantize_option(f: _AnyCallable | None = None, *, model_env: openllm.utils.EnvVarMixin | None = None, **attrs: t.Any) -> t.Callable[[FC], FC]:
   return cli_option(
       '--quantise',
       '--quantize',
@@ -450,10 +439,10 @@ def quantize_option(f: _AnyCallable | None = None, *, build: bool = False, model
 
       - ``gptq``: ``GPTQ`` [quantization](https://arxiv.org/abs/2210.17323)
 
-      > [!NOTE] that the model can also be served with quantized weights.
-      ''' + ('''
-      > [!NOTE] that this will set the mode for serving within deployment.''' if build else '') + '''
-      > [!NOTE] that quantization are currently only available in *PyTorch* models.''',
+      > Note that the model can also be served with quantized weights.
+
+      > Note that quantization are currently only available in *PyTorch* models.
+      ''',
       **attrs
   )(f)
 
@@ -476,7 +465,8 @@ def workers_per_resource_option(f: _AnyCallable | None = None, *, build: bool = 
       - ``conserved``: This will determine the number of available GPU resources, and only assign one worker for the LLMRunner. For example, if ther are 4 GPUs available, then ``conserved`` is equivalent to ``--workers-per-resource 0.25``.
       ''' + (
           """\n
-      > [!NOTE] The workers value passed into 'build' will determine how the LLM can
+      > [!NOTE]
+      > The workers value passed into 'build' will determine how the LLM can
       > be provisioned in Kubernetes as well as in standalone container. This will
       > ensure it has the same effect with 'openllm start --api-workers ...'""" if build else ''
       ),
@@ -537,10 +527,9 @@ def container_registry_option(f: _AnyCallable | None = None, **attrs: t.Any) -> 
       callback=container_registry_callback,
       help='''The default container registry to get the base image for building BentoLLM.
 
-      Currently, it supports 'ecr', 'ghcr.io', 'docker.io'
-
       \b
-      > [!NOTE] that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm ext build-base-container`` for more information.
+      > [!NOTE]
+      > that in order to build the base image, you will need a GPUs to compile custom kernel. See ``openllm build-base-container`` for more information.
       ''',
       **attrs
   )(f)

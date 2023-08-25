@@ -400,7 +400,7 @@ def import_command(
 @workers_per_resource_option(factory=click, build=True)
 @click.option('--device', type=dantic.CUDA, multiple=True, envvar='CUDA_VISIBLE_DEVICES', callback=parse_device_callback, help='Set the device', show_envvar=True)
 @cog.optgroup.group(cls=cog.MutuallyExclusiveOptionGroup, name='Optimisation options')
-@quantize_option(factory=cog.optgroup, build=True)
+@quantize_option(factory=cog.optgroup)
 @bettertransformer_option(factory=cog.optgroup)
 @click.option('--runtime', type=click.Choice(['ggml', 'transformers']), default='transformers', help='The runtime to use for the given model. Default is transformers.')
 @click.option(
@@ -631,7 +631,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
           'cpu': not config['requires_gpu'],
           'gpu': True,
           'runtime_impl': runtime_impl,
-          'installation': f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config['requirements'] else 'openllm',
+          'installation': 'pip install ' + (f'"openllm[{m}]"' if m in OPTIONAL_DEPENDENCIES or config['requirements'] else 'openllm'),
       }
       converted.extend([normalise_model_name(i) for i in config['model_ids']])
       if DEBUG:
@@ -658,12 +658,10 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
 
       tabulate.PRESERVE_WHITESPACE = True
       # llm, architecture, url, model_id, installation, cpu, gpu, runtime_impl
-      data: list[str | tuple[str, str, list[str], str, LiteralString, LiteralString, tuple[LiteralRuntime, ...]]] = []
+      data: list[str | tuple[str, str, str, str, tuple[LiteralRuntime, ...]]] = []
       for m, v in json_data.items():
-        data.extend([(m, v['architecture'], v['model_id'], v['installation'], '❌' if not v['cpu'] else '✅', '✅', v['runtime_impl'],)])
-      column_widths = [
-          int(termui.COLUMNS / 12), int(termui.COLUMNS / 6), int(termui.COLUMNS / 4), int(termui.COLUMNS / 12), int(termui.COLUMNS / 12), int(termui.COLUMNS / 12), int(termui.COLUMNS / 4),
-      ]
+        data.extend([(m, v['architecture'], ', '.join(v['model_id'][:2] if len(v['model_id']) > 2 else v['model_id']) + ', and more.', v['installation'], v['runtime_impl'])])
+      column_widths = [int(termui.COLUMNS / 12), int(termui.COLUMNS / 4), int(termui.COLUMNS / 4), int(termui.COLUMNS / 4), int(termui.COLUMNS / 4)]
 
       if len(data) == 0 and len(failed_initialized) > 0:
         termui.echo('Exception found while parsing models:\n', fg='yellow')
@@ -672,7 +670,7 @@ def models_command(ctx: click.Context, output: LiteralOutput, show_available: bo
           termui.echo(traceback.print_exception(None, err, None, limit=5), fg='red')  # type: ignore[func-returns-value]
         sys.exit(1)
 
-      table = tabulate.tabulate(data, tablefmt='fancy_grid', headers=['LLM', 'Architecture', 'Models Id', 'pip install', 'CPU', 'GPU', 'Runtime'], maxcolwidths=column_widths)
+      table = tabulate.tabulate(data, tablefmt='fancy_grid', headers=['LLM', 'Architecture', 'Models Id', 'Installation', 'Runtime'], maxcolwidths=column_widths)
       termui.echo(table, fg='white')
 
       if DEBUG and len(failed_initialized) > 0:

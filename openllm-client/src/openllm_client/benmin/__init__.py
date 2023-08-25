@@ -1,6 +1,6 @@
 """This holds a simple client implementation, somewhat similar to `bentoml.client`.
 
-This module is subjected to change and to be merged upstream to BentoML.
+This module is considered _EXPERIMENTAL_ and changes may/maynot match with upstream client implementation.
 
 ```python
 import openllm_client
