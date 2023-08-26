@@ -31,6 +31,7 @@ repos:
         exclude: |
           (?x)^(
               openllm-client/src/openllm_client/pb.*|
+              cz.py |
               openllm-python/src/openllm/cli/entrypoint.py
           )$
   - repo: https://github.com/econchick/interrogate
