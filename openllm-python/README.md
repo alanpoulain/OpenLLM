@@ -43,7 +43,7 @@ Key features include:
 
 🚂 **State-of-the-art LLMs**: Integrated support for a wide range of open-source LLMs and model runtimes, including but not limited to Llama 2, StableLM, Falcon, Dolly, Flan-T5, ChatGLM, and StarCoder.
 
-🔥 **Flexible APIs**: Serve LLMs over a RESTful API or gRPC with a single command. You can interact with the mode using a Web UI, CLI, Python/JavaScript clients, or any HTTP client of your choice.
+🔥 **Flexible APIs**: Serve LLMs over a RESTful API or gRPC with a single command. You can interact with the model using a Web UI, CLI, Python/JavaScript clients, or any HTTP client of your choice.
 
 ⛓️ **Freedom to build**: First-class support for LangChain, BentoML and Hugging Face, allowing you to easily create your own AI applications by composing LLMs with other models and services.
 
@@ -815,9 +815,9 @@ openllm start falcon --model-id TheBloke/falcon-40b-instruct-GPTQ --quantize gpt
 ```
 
 > [!NOTE]
-> In order to run GPTQ, make sure you run `pip install "openllm[gptq]"` first
-> to install the dependency. The weights of all supported models should be quantized before serving.
-> See [GPTQ-for-LLaMa](https://github.com/qwopqwop200/GPTQ-for-LLaMa) for more information on GPTQ quantization.
+> In order to run GPTQ, make sure you run `pip install "openllm[gptq]" --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/`
+> first to install the dependency. From the GPTQ paper, it is recommended to quantized the weights before serving.
+> See [AutoGPTQ](https://github.com/PanQiWei/AutoGPTQ) for more information on GPTQ quantization.
 
 ## 🛠️ Fine-tuning support (Experimental)
 
